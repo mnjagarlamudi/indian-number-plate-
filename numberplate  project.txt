@@ -1,0 +1,90 @@
+import requests
+import random
+import numpy as np 
+import pandas as pd 
+from tqdm import tqdm
+from PIL import Image
+import matplotlib.pyplot as plt
+import urllib
+import cv2
+import pytesseract
+import argparse
+from PIL import Image
+from pytesseract import image_to_string
+
+import os
+import json
+data = pd.read_json('Indian_Number_plates.json', lines=True)
+pd.set_option('display.max_colwidth', -1)
+
+del data['extras']
+data['points'] = data.apply(lambda row: row['annotation'][0]['points'], axis=1)
+del data['annotation']
+Images = []
+Plates = []
+def downloadTraining(df):
+    for index, row in df.iterrows():
+        resp = urllib.request.urlopen(row[0])
+        im = np.array(Image.open(resp))
+
+        Images.append(im)  
+
+        x_point_top = row[1][0]['x']*im.shape[1]
+        y_point_top = row[1][0]['y']*im.shape[0]
+        x_point_bot = row[1][1]['x']*im.shape[1]
+        y_point_bot = row[1][1]['y']*im.shape[0]
+
+        carImage = Image.fromarray(im)
+        plateImage = carImage.crop((x_point_top, y_point_top, x_point_bot, y_point_bot))
+        Plates.append(np.array(plateImage))
+downloadTraining(data)
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+
+for i in range(len(Plates)):
+	fig, ax = plt.subplots(2, 1, constrained_layout=True)
+		
+	ax[0].set_title('Input Image')
+	ax[1].set_title('Output Image')
+	crp=Plates[i]
+	img = Image.fromarray(Plates[i], 'RGB')
+	img.save("11.png")
+	img = cv2.imread(r'C:\Users\naresh\Downloads\number_plate_detection\demo\OpenCV_3_License_Plate_Recognition_Python-master\11.png',0)
+	img = cv2.medianBlur(img,5)
+	ret,m1 = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+	m1r = Image.fromarray(m1)
+	m2 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_MEAN_C,\
+		    cv2.THRESH_BINARY,11,2)
+	m2r = Image.fromarray(m2)
+	m3 = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,\
+		    cv2.THRESH_BINARY,11,2)
+	m3r = Image.fromarray(m3)
+	titles = ['Original Image', 'Global Thresholding (v = 127)','Adaptive Mean Thresholding', 'Adaptive Gaussian Thresholding']
+	images = [img, m1, m2, m3]
+	for i in range(4):
+	    plt.subplot(2,2,i+1),plt.imshow(images[i],'gray')
+	    plt.title(titles[i])
+	    plt.xticks([]),plt.yticks([])
+	plt.show()
+	m1r.save("11.png")
+	img = cv2.imread('11.png')  
+	dst = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
+	dst = Image.fromarray(dst)
+	dst.save("11.png")
+	print(pytesseract.image_to_string(Image.open(r"C:\Users\naresh\Downloads\number_plate_detection\demo\OpenCV_3_License_Plate_Recognition_Python-master\11.png"),config ='--psm 6'))
+	m2r.save("22.png")
+	img = cv2.imread('22.png') 
+	dst = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
+	dst = Image.fromarray(dst)
+	dst.save("22.png")
+	print(pytesseract.image_to_string(Image.open(r"C:\Users\naresh\Downloads\number_plate_detection\demo\OpenCV_3_License_Plate_Recognition_Python-master\2.png"),config ='--psm 6'))
+	m3r.save("33.png")
+	img = cv2.imread('33.png') 
+	dst = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 15)
+	dst = Image.fromarray(dst)
+	dst.save("33.png")
+	print(pytesseract.image_to_string(Image.open(r"C:\Users\naresh\Downloads\number_plate_detection\demo\OpenCV_3_License_Plate_Recognition_Python-master\3.png"),config ='--psm 6'))
+	ax[0].imshow(Images[i])
+	ax[1].imshow(Plates[i])
+	plt.show()
